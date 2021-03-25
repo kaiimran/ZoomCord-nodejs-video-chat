@@ -111,6 +111,10 @@ a {
 	color: #777;
 }
 
+.chat-messages .is-typing {
+	margin-bottom: 7px;
+}
+
 .chat-form-container {
 	padding: 20px 30px;
 	background-color: var(--dark-color-a);
@@ -187,4 +191,18 @@ a {
 	.chat-sidebar {
 		display: none;
 	}
+}
+
+#video-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, 350px);
+	grid-auto-rows: 350px;
+	padding: 30px 20px;
+	background-color: var(--dark-color-b);
+}
+  
+#video-grid video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover; /* zoom in to make it square */
 }
