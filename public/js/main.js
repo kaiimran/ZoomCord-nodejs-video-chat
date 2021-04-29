@@ -5,6 +5,16 @@ const userList = document.getElementById('users');
 const inputMessage =document.getElementById('msg');
 const TYPING_TIMER_LENGTH = 400; // ms
 
+const videoGrid = document.getElementById('video-grid')
+const myVideo = document.createElement('video')
+myVideo.muted = true
+
+const myPeer = new Peer(undefined, {
+    host: 'localhost',
+    port: '3001'
+})
+const peers = {}
+
 let typing = false;
 let lastTypingTime;
 
@@ -17,19 +27,74 @@ const { username, room} = Qs.parse(location.search, {
 // Insert into io('url') if different than window.location / domain
 const socket = io();
 
-// On join chatroom
-socket.emit('joinRoom', { username, room });
+// Prevent duplicate username
+socket.on('sameName', () => {
+    alert("Username already exist, please choose another username.");
+    window.history.back();
+});
+
+// Prevent entering invalid room
+socket.on('roomNotValid', () => {
+    alert("Room does not exist, please only select either Malaysia, Indonesia or Singapore.");
+    window.history.back();
+});
+
+navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+}).then(stream => {
+    addVideoStream(myVideo, stream)
+
+    myPeer.on('call', call => {
+        call.answer(stream)
+        const video = document.createElement('video')
+        call.on('stream', userVideoStream => {
+            addVideoStream(video, userVideoStream)
+        })
+    })
+
+    socket.on('user-connected', userId => {
+        // connectToNewUser(userId, stream)
+        console.log(userId)
+        // make sure myPeer.on('call') has been executed first
+        setTimeout(connectToNewUser,1000,userId,stream)
+    })
+})
+
+socket.on('user-disconnected', userId => {
+    if (peers[userId]) peers[userId].close()
+})
+
+myPeer.on('open', userPeerId => {
+    // On join chatroom
+    socket.emit('joinRoom', { userPeerId, username, room });
+})
+
+function connectToNewUser(userId, stream) {
+    const call = myPeer.call(userId, stream)
+    const video = document.createElement('video')
+    call.on('stream', userVideoStream => {
+        addVideoStream(video, userVideoStream)
+    })
+    call.on('close', () => {
+        video.remove()
+    })
+
+    peers[userId] = call
+}
+
+function addVideoStream(video, stream) {
+    video.srcObject = stream
+    video.addEventListener('loadedmetadata', () => {
+        video.play()
+    })
+    videoGrid.append(video)
+}
 
 // Get room and users
 socket.on('roomUsers', ({ room, users }) => {
     outputRoomName(room);
     outputUsers(users);
-});
-
-// Prevent duplicate username
-socket.on('sameName', () => {
-    alert("Username already exist, please choose another username.");
-    window.history.back();
 });
 
 inputMessage.addEventListener("input", () => {
